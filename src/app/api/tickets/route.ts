@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     where: { role: 'admin' },
     select: { email: true },
   })
-  sendNewTicketEmail(
+  await sendNewTicketEmail(
     admins.map(a => a.email),
     {
       id: ticket.id,

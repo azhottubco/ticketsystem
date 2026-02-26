@@ -70,7 +70,7 @@ export async function sendNewTicketEmail(
     <p><a href="${APP_URL}/tickets/${ticket.id}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View Ticket</a></p>
   `)
 
-  transport.sendMail({ from: FROM, to: adminEmails, subject: `[New Ticket] ${ticket.title}`, html }).catch(console.error)
+  await transport.sendMail({ from: FROM, to: adminEmails, subject: `[New Ticket] ${ticket.title}`, html })
 }
 
 export async function sendStatusChangeEmail(
