@@ -1,0 +1,42 @@
+import { auth } from '@/auth'
+import { NextResponse } from 'next/server'
+
+export default auth((request) => {
+  const { nextUrl } = request
+  const { pathname } = nextUrl
+  const session = request.auth
+  const isLoggedIn = !!session
+
+  // Skip API and static paths
+  if (
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico'
+  ) {
+    return NextResponse.next()
+  }
+
+  // Redirect unauthenticated users to login
+  if (!isLoggedIn && pathname !== '/login') {
+    return NextResponse.redirect(new URL('/login', nextUrl))
+  }
+
+  // Redirect authenticated users away from login / root
+  if (isLoggedIn && (pathname === '/login' || pathname === '/')) {
+    return NextResponse.redirect(new URL('/dashboard', nextUrl))
+  }
+
+  // Admin-only routes
+  if (isLoggedIn && pathname.startsWith('/admin')) {
+    const role = (session?.user as { role?: string })?.role
+    if (role !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', nextUrl))
+    }
+  }
+
+  return NextResponse.next()
+})
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+}
