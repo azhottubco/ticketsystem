@@ -14,7 +14,6 @@ const schema = z.object({
   fullName: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email'),
   role: z.enum(['admin', 'agent', 'user']),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 type FormData = z.infer<typeof schema>
 
@@ -32,7 +31,7 @@ export function CreateUserForm({ onSuccess }: { onSuccess: (user: User) => void 
     })
     if (res.ok) {
       const user = await res.json()
-      toast.success(`User ${user.email} created`)
+      toast.success(`User ${user.email} created — login details sent by email`)
       onSuccess(user)
     } else {
       const err = await res.json()
@@ -65,11 +64,7 @@ export function CreateUserForm({ onSuccess }: { onSuccess: (user: User) => void 
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-1.5">
-        <Label>Initial Password</Label>
-        <Input type="password" placeholder="Minimum 8 characters" {...register('password')} />
-        {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-      </div>
+      <p className="text-xs text-slate-500">A temporary password will be auto-generated and emailed to the user. They will be required to change it on first login.</p>
       <div className="flex justify-end gap-2 pt-1">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Creating…' : 'Create User'}

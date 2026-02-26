@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,6 +32,7 @@ export default function ProfilePage() {
 
   const user = session?.user
   const role = (user as { role?: string })?.role || 'user'
+  const mustChangePassword = (user as { mustChangePassword?: boolean })?.mustChangePassword
 
   const nameForm = useForm<z.infer<typeof nameSchema>>({
     resolver: zodResolver(nameSchema),
@@ -62,9 +63,14 @@ export default function ProfilePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: data.password }),
     })
-    if (res.ok) { toast.success('Password updated'); pwForm.reset() }
-    else toast.error('Failed to update password')
-    setSavingPw(false)
+    if (res.ok) {
+      toast.success('Password updated — please log in again')
+      pwForm.reset()
+      await signOut({ callbackUrl: '/login' })
+    } else {
+      toast.error('Failed to update password')
+      setSavingPw(false)
+    }
   }
 
   return (
@@ -73,6 +79,12 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-semibold text-slate-900">Profile</h1>
         <p className="text-sm text-slate-500 mt-1">Manage your account settings.</p>
       </div>
+
+      {mustChangePassword && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <strong>Action required:</strong> You must set a new password before you can access the rest of the app. Choose a password only you know.
+        </div>
+      )}
 
       <Card>
         <CardHeader><CardTitle className="text-base">Account Info</CardTitle></CardHeader>
@@ -89,17 +101,12 @@ export default function ProfilePage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Display Name</CardTitle></CardHeader>
-        <CardContent>
-          <form onSubmit={nameForm.handleSubmit(updateName)} className="flex gap-2">
-            <Input {...nameForm.register('fullName')} placeholder="Your name" />
-            <Button type="submit" disabled={savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Change Password</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Change Password
+            {mustChangePassword && <span className="ml-2 text-red-600 text-xs font-normal">(required)</span>}
+          </CardTitle>
+        </CardHeader>
         <CardContent>
           <form onSubmit={pwForm.handleSubmit(updatePassword)} className="space-y-3">
             <div className="space-y-1.5">
@@ -120,6 +127,18 @@ export default function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {!mustChangePassword && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Display Name</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={nameForm.handleSubmit(updateName)} className="flex gap-2">
+              <Input {...nameForm.register('fullName')} placeholder="Your name" />
+              <Button type="submit" disabled={savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

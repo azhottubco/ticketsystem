@@ -26,19 +26,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.fullName,
           role: user.role,
+          mustChangePassword: user.mustChangePassword,
         }
       },
     }),
   ],
   callbacks: {
     jwt({ token, user }) {
-      if (user) token.role = (user as { role?: string }).role
+      if (user) {
+        token.role = (user as { role?: string }).role
+        token.mustChangePassword = (user as { mustChangePassword?: boolean }).mustChangePassword
+      }
       return token
     },
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub!
-        ;(session.user as { id: string; role?: string }).role = token.role as string
+        ;(session.user as { id: string; role?: string; mustChangePassword?: boolean }).role = token.role as string
+        ;(session.user as { mustChangePassword?: boolean }).mustChangePassword = token.mustChangePassword as boolean
       }
       return session
     },

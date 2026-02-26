@@ -34,6 +34,11 @@ export default auth((request) => {
     }
   }
 
+  // Force password change for new users
+  if (isLoggedIn && (session?.user as { mustChangePassword?: boolean })?.mustChangePassword && !pathname.startsWith('/profile')) {
+    return NextResponse.redirect(new URL('/profile', nextUrl))
+  }
+
   return NextResponse.next()
 })
 

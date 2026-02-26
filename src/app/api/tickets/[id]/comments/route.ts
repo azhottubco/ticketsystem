@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sendNewCommentEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -57,7 +58,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   // Verify ticket access
-  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { createdById: true } })
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    include: {
+      creator: { select: { id: true, email: true } },
+      assignee: { select: { id: true, email: true } },
+    },
+  })
   if (!ticket) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (!isStaff && ticket.createdById !== userId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -74,6 +81,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       author: { select: { id: true, fullName: true, email: true, role: true } },
     },
   })
+
+  // Notify on public comments only
+  if (!parsed.data.isInternal) {
+    const recipients = new Set<string>()
+    if (ticket.creator.email && ticket.creator.id !== userId) recipients.add(ticket.creator.email)
+    if (ticket.assignee?.email && ticket.assignee.id !== userId) recipients.add(ticket.assignee.email)
+    if (recipients.size > 0) {
+      sendNewCommentEmail(
+        Array.from(recipients),
+        { id: ticket.id, title: ticket.title },
+        comment.author.fullName || comment.author.email
+      )
+    }
+  }
 
   return NextResponse.json(comment, { status: 201 })
 }

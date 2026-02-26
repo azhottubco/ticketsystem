@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sendStatusChangeEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -104,6 +105,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
   if (historyEntries.length > 0) {
     await prisma.ticketHistory.createMany({ data: historyEntries })
+  }
+
+  // Notify creator on status change
+  if (updates.status && updates.status !== current.status) {
+    sendStatusChangeEmail(ticket.creator.email, { id: ticket.id, title: ticket.title, status: ticket.status })
   }
 
   return NextResponse.json(ticket)

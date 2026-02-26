@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
     const parsed = passwordSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
     const hashed = await bcrypt.hash(parsed.data.password, 12)
-    await prisma.user.update({ where: { id: session.user.id! }, data: { password: hashed } })
+    await prisma.user.update({ where: { id: session.user.id! }, data: { password: hashed, mustChangePassword: false } })
     return NextResponse.json({ ok: true })
   }
 

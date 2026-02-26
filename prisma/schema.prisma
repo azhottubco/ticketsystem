@@ -27,13 +27,14 @@ enum TicketPriority {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  fullName  String?
-  role      UserRole @default(user)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  password           String
+  fullName           String?
+  role               UserRole @default(user)
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   createdTickets  Ticket[]        @relation("TicketCreator")
   assignedTickets Ticket[]        @relation("TicketAssignee")

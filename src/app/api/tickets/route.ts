@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sendNewTicketEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -74,6 +75,22 @@ export async function POST(request: NextRequest) {
       creator: { select: { id: true, fullName: true, email: true } },
     },
   })
+
+  // Notify all admins
+  const admins = await prisma.user.findMany({
+    where: { role: 'admin' },
+    select: { email: true },
+  })
+  sendNewTicketEmail(
+    admins.map(a => a.email),
+    {
+      id: ticket.id,
+      title: ticket.title,
+      priority: ticket.priority,
+      creatorName: ticket.creator.fullName,
+      creatorEmail: ticket.creator.email,
+    }
+  )
 
   return NextResponse.json(ticket, { status: 201 })
 }
