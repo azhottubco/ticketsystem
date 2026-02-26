@@ -12,7 +12,7 @@ const createSchema = z.object({
 })
 
 function generateTempPassword(): string {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
   return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     select: { id: true, email: true, fullName: true, role: true, createdAt: true, updatedAt: true },
   })
 
-  sendWelcomeEmail(parsed.data.email, parsed.data.fullName, tempPassword)
+  await sendWelcomeEmail(parsed.data.email, parsed.data.fullName, tempPassword)
 
   return NextResponse.json(user, { status: 201 })
 }

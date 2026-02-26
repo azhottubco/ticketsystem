@@ -51,7 +51,7 @@ export async function sendWelcomeEmail(to: string, name: string, tempPassword: s
     <p><a href="${APP_URL}/login" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Log In Now</a></p>
   `)
 
-  transport.sendMail({ from: FROM, to, subject: `Welcome to ${APP_NAME} — Your Account Details`, html }).catch(console.error)
+  await transport.sendMail({ from: FROM, to, subject: `Welcome to ${APP_NAME} — Your Account Details`, html })
 }
 
 export async function sendNewTicketEmail(
