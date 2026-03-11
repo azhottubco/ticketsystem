@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { sendStatusChangeEmail } from '@/lib/email'
+import { del } from '@vercel/blob'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -110,6 +111,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   // Notify creator on status change
   if (updates.status && updates.status !== current.status) {
     await sendStatusChangeEmail(ticket.creator.email, { id: ticket.id, title: ticket.title, status: ticket.status })
+  }
+
+  // Clean up attachments when ticket is closed
+  if (updates.status === 'closed' && current.status !== 'closed') {
+    const attachments = await prisma.ticketAttachment.findMany({
+      where: { ticketId: id },
+      select: { id: true, url: true },
+    })
+    if (attachments.length > 0) {
+      await Promise.all(attachments.map(a => del(a.url)))
+      await prisma.ticketAttachment.deleteMany({ where: { ticketId: id } })
+    }
   }
 
   return NextResponse.json(ticket)
