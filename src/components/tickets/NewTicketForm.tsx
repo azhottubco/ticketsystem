@@ -97,7 +97,7 @@ export function NewTicketForm({ categories }: { categories: Pick<Category, 'id' 
       await Promise.all(files.map(async (file) => {
         const fd = new FormData()
         fd.append('file', file)
-        const r = await fetch(`/api/tickets/${ticket.id}/attachments`, { method: 'POST', body: fd })
+        const r = await fetch(`/api/tickets/${ticket.id}/attachments?skipNotify=1`, { method: 'POST', body: fd })
         if (!r.ok) failed++
       }))
       if (failed > 0) toast.warning(`${failed} attachment(s) failed to upload`)

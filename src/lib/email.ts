@@ -114,3 +114,62 @@ export async function sendNewCommentEmail(
 
   await transport.sendMail({ from: FROM, to: recipients, subject: `[New Comment] ${ticket.title}`, html })
 }
+
+export async function sendAttachmentEmail(
+  recipients: string[],
+  ticket: { id: string; title: string },
+  uploaderName: string,
+  filename: string
+) {
+  if (!recipients.length) return
+  const html = wrap(`
+    <h2 style="margin:0 0 16px;font-size:18px;color:#0f172a;">New Attachment on Your Ticket</h2>
+    <p><strong>${uploaderName}</strong> added an attachment to your support ticket.</p>
+    <table style="margin:16px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:16px;width:100%;box-sizing:border-box;">
+      <tr><td style="padding:4px 0;color:#64748b;width:120px;">Ticket:</td><td><a href="${APP_URL}/tickets/${ticket.id}" style="color:#2563eb;">${ticket.title}</a></td></tr>
+      <tr><td style="padding:4px 0;color:#64748b;">File:</td><td>${filename}</td></tr>
+    </table>
+    <p><a href="${APP_URL}/tickets/${ticket.id}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View Ticket</a></p>
+  `)
+
+  await transport.sendMail({ from: FROM, to: recipients, subject: `[New Attachment] ${ticket.title}`, html })
+}
+
+export async function sendPriorityChangeEmail(
+  to: string,
+  ticket: { id: string; title: string; priority: string }
+) {
+  const priorityLabel: Record<string, string> = {
+    low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical',
+  }
+  const label = priorityLabel[ticket.priority] ?? ticket.priority
+  const html = wrap(`
+    <h2 style="margin:0 0 16px;font-size:18px;color:#0f172a;">Ticket Priority Updated</h2>
+    <p>The priority of your support ticket has been updated.</p>
+    <table style="margin:16px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:16px;width:100%;box-sizing:border-box;">
+      <tr><td style="padding:4px 0;color:#64748b;width:120px;">Ticket:</td><td><a href="${APP_URL}/tickets/${ticket.id}" style="color:#2563eb;">${ticket.title}</a></td></tr>
+      <tr><td style="padding:4px 0;color:#64748b;">New Priority:</td><td style="font-weight:bold;">${label}</td></tr>
+    </table>
+    <p><a href="${APP_URL}/tickets/${ticket.id}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View Ticket</a></p>
+  `)
+
+  await transport.sendMail({ from: FROM, to, subject: `[Ticket Update] ${ticket.title} — Priority Changed`, html })
+}
+
+export async function sendAssignmentEmail(
+  to: string,
+  ticket: { id: string; title: string; priority: string; creatorName: string | null; creatorEmail: string }
+) {
+  const html = wrap(`
+    <h2 style="margin:0 0 16px;font-size:18px;color:#0f172a;">Ticket Assigned to You</h2>
+    <p>A support ticket has been assigned to you.</p>
+    <table style="margin:16px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:16px;width:100%;box-sizing:border-box;">
+      <tr><td style="padding:4px 0;color:#64748b;width:120px;">Ticket:</td><td><a href="${APP_URL}/tickets/${ticket.id}" style="color:#2563eb;">${ticket.title}</a></td></tr>
+      <tr><td style="padding:4px 0;color:#64748b;">Priority:</td><td style="text-transform:capitalize;">${ticket.priority}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b;">Submitted by:</td><td>${ticket.creatorName || ticket.creatorEmail}</td></tr>
+    </table>
+    <p><a href="${APP_URL}/tickets/${ticket.id}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View Ticket</a></p>
+  `)
+
+  await transport.sendMail({ from: FROM, to, subject: `[Ticket Assigned] ${ticket.title}`, html })
+}

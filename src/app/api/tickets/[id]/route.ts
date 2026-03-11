@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { sendStatusChangeEmail } from '@/lib/email'
+import { sendStatusChangeEmail, sendPriorityChangeEmail, sendAssignmentEmail } from '@/lib/email'
 import { del } from '@vercel/blob'
 import { z } from 'zod'
 
@@ -111,6 +111,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   // Notify creator on status change
   if (updates.status && updates.status !== current.status) {
     await sendStatusChangeEmail(ticket.creator.email, { id: ticket.id, title: ticket.title, status: ticket.status })
+  }
+
+  // Notify creator on priority change
+  if (updates.priority && updates.priority !== current.priority) {
+    await sendPriorityChangeEmail(ticket.creator.email, { id: ticket.id, title: ticket.title, priority: ticket.priority })
+  }
+
+  // Notify newly assigned agent/admin
+  if (updates.assignedToId && updates.assignedToId !== current.assignedToId && ticket.assignee) {
+    await sendAssignmentEmail(ticket.assignee.email, {
+      id: ticket.id,
+      title: ticket.title,
+      priority: ticket.priority,
+      creatorName: ticket.creator.fullName,
+      creatorEmail: ticket.creator.email,
+    })
   }
 
   // Clean up attachments when ticket is closed

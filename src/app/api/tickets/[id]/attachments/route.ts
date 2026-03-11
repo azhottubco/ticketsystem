@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { put } from '@vercel/blob'
+import { sendAttachmentEmail } from '@/lib/email'
 
 const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 const ALLOWED_TYPES = [
@@ -43,7 +44,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const role = (session.user as { role?: string }).role
   const userId = session.user.id!
 
-  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { createdById: true } })
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    select: {
+      createdById: true,
+      title: true,
+      creator: { select: { id: true, email: true } },
+      assignee: { select: { id: true, email: true } },
+    },
+  })
   if (!ticket) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (role === 'user' && ticket.createdById !== userId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -70,6 +79,34 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     },
     include: { uploadedBy: { select: { id: true, fullName: true, email: true } } },
   })
+
+  // Notify the other party (skip during initial ticket creation)
+  const skipNotify = new URL(request.url).searchParams.get('skipNotify') === '1'
+  if (!skipNotify) {
+    const isStaff = role === 'admin' || role === 'agent'
+    const recipients = new Set<string>()
+    if (isStaff) {
+      if (ticket.creator.email && ticket.creator.id !== userId) recipients.add(ticket.creator.email)
+    } else {
+      if (ticket.assignee?.email && ticket.assignee.id !== userId) {
+        recipients.add(ticket.assignee.email)
+      } else {
+        const staff = await prisma.user.findMany({
+          where: { role: { in: ['admin', 'agent'] } },
+          select: { email: true },
+        })
+        staff.forEach(s => recipients.add(s.email))
+      }
+    }
+    if (recipients.size > 0) {
+      await sendAttachmentEmail(
+        Array.from(recipients),
+        { id, title: ticket.title },
+        attachment.uploadedBy.fullName || attachment.uploadedBy.email,
+        file.name
+      )
+    }
+  }
 
   return NextResponse.json(attachment, { status: 201 })
 }
