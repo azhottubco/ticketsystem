@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { Ticket, User, Comment, TicketHistory, Category, TicketStatus, TicketPriority } from '@/types'
+import { Ticket, User, Comment, TicketHistory, TicketAttachment, Category, TicketStatus, TicketPriority } from '@/types'
 import { TicketStatusBadge } from './TicketStatusBadge'
 import { TicketPriorityBadge } from './TicketPriorityBadge'
 import { CommentThread } from './CommentThread'
@@ -15,8 +15,30 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Trash2, Clock } from 'lucide-react'
+import { ArrowLeft, Trash2, Clock, Paperclip, FileText, Image, X, Download } from 'lucide-react'
 import Link from 'next/link'
+
+const MAX_SIZE = 10 * 1024 * 1024
+const ALLOWED_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+]
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function AttachmentIcon({ mimeType }: { mimeType: string }) {
+  return mimeType.startsWith('image/') ? (
+    <Image className="h-4 w-4 text-blue-500 shrink-0" />
+  ) : (
+    <FileText className="h-4 w-4 text-slate-500 shrink-0" />
+  )
+}
 
 interface Props {
   initialTicket: Ticket
@@ -27,22 +49,62 @@ interface Props {
 
 export function TicketDetailClient({ initialTicket, currentUser, agents, categories }: Props) {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [ticket, setTicket] = useState(initialTicket)
   const [comments, setComments] = useState<Comment[]>([])
   const [loadingComments, setLoadingComments] = useState(true)
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([])
+  const [uploadingFile, setUploadingFile] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [updating, setUpdating] = useState(false)
   const isAdmin = currentUser.role === 'admin'
   const isStaff = currentUser.role !== 'user'
 
-  useEffect(() => { fetchComments() }, [ticket.id])
+  useEffect(() => { fetchComments(); fetchAttachments() }, [ticket.id])
 
   async function fetchComments() {
     setLoadingComments(true)
     const res = await fetch(`/api/tickets/${ticket.id}/comments`)
     if (res.ok) setComments(await res.json())
     setLoadingComments(false)
+  }
+
+  async function fetchAttachments() {
+    const res = await fetch(`/api/tickets/${ticket.id}/attachments`)
+    if (res.ok) setAttachments(await res.json())
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!ALLOWED_TYPES.includes(file.type)) { toast.error('File type not allowed'); return }
+    if (file.size > MAX_SIZE) { toast.error('File exceeds 10 MB limit'); return }
+
+    setUploadingFile(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`/api/tickets/${ticket.id}/attachments`, { method: 'POST', body: fd })
+    if (res.ok) {
+      const attachment = await res.json()
+      setAttachments(prev => [...prev, attachment])
+      toast.success('Attachment uploaded')
+    } else {
+      const err = await res.json()
+      toast.error(err.error || 'Upload failed')
+    }
+    setUploadingFile(false)
+  }
+
+  async function handleDeleteAttachment(attachmentId: string) {
+    const res = await fetch(`/api/tickets/${ticket.id}/attachments/${attachmentId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setAttachments(prev => prev.filter(a => a.id !== attachmentId))
+      toast.success('Attachment removed')
+    } else {
+      toast.error('Failed to remove attachment')
+    }
   }
 
   async function updateTicket(updates: Partial<Ticket>) {
@@ -99,6 +161,57 @@ export function TicketDetailClient({ initialTicket, currentUser, agents, categor
           <Card>
             <CardContent className="p-5">
               <p className="text-sm text-slate-700 whitespace-pre-wrap">{ticket.description}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2 pt-4 px-5">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Attachments {attachments.length > 0 && <span className="text-slate-400 font-normal text-sm">({attachments.length})</span>}</CardTitle>
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ALLOWED_TYPES.join(',')}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="gap-1.5 h-7 text-xs"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {uploadingFile ? 'Uploading…' : 'Add file'}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-5 pb-4">
+              {attachments.length === 0 ? (
+                <p className="text-sm text-slate-400">No attachments yet.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {attachments.map(a => (
+                    <li key={a.id} className="flex items-center gap-2 text-sm bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+                      <AttachmentIcon mimeType={a.mimeType} />
+                      <span className="flex-1 truncate text-slate-700">{a.filename}</span>
+                      <span className="text-xs text-slate-400 shrink-0">{formatBytes(a.size)}</span>
+                      <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-500" title="Download">
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
+                      {(isAdmin || a.uploadedById === currentUser.id) && (
+                        <button type="button" onClick={() => handleDeleteAttachment(a.id)} className="text-slate-400 hover:text-red-500" title="Remove">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 

@@ -36,10 +36,11 @@ model User {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  createdTickets  Ticket[]        @relation("TicketCreator")
-  assignedTickets Ticket[]        @relation("TicketAssignee")
-  comments        Comment[]
-  history         TicketHistory[]
+  createdTickets      Ticket[]           @relation("TicketCreator")
+  assignedTickets     Ticket[]           @relation("TicketAssignee")
+  comments            Comment[]
+  history             TicketHistory[]
+  uploadedAttachments TicketAttachment[] @relation("AttachmentUploader")
 }
 
 model Category {
@@ -71,8 +72,9 @@ model Ticket {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  comments Comment[]
-  history  TicketHistory[]
+  comments    Comment[]
+  history     TicketHistory[]
+  attachments TicketAttachment[]
 }
 
 model Comment {
@@ -85,6 +87,19 @@ model Comment {
   author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model TicketAttachment {
+  id           String   @id @default(cuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User     @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  filename     String
+  url          String
+  size         Int
+  mimeType     String
+  createdAt    DateTime @default(now())
 }
 
 model TicketHistory {

@@ -18,6 +18,18 @@ export interface Category {
   createdAt: string
 }
 
+export interface TicketAttachment {
+  id: string
+  ticketId: string
+  uploadedById: string
+  filename: string
+  url: string
+  size: number
+  mimeType: string
+  createdAt: string
+  uploadedBy?: Pick<User, 'id' | 'fullName' | 'email'> | null
+}
+
 export interface Ticket {
   id: string
   title: string
@@ -36,6 +48,7 @@ export interface Ticket {
   creator?: User | null
   assignee?: User | null
   history?: TicketHistory[]
+  attachments?: TicketAttachment[]
 }
 
 export interface Comment {
