@@ -85,10 +85,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // Notify on public comments only
   if (!parsed.data.isInternal) {
     const recipients = new Set<string>()
-    if (ticket.creator.email && ticket.creator.id !== userId) recipients.add(ticket.creator.email)
-    if (ticket.assignee?.email && ticket.assignee.id !== userId) recipients.add(ticket.assignee.email)
+
+    if (isStaff) {
+      // Staff commented → notify the ticket submitter
+      if (ticket.creator.email && ticket.creator.id !== userId) recipients.add(ticket.creator.email)
+    } else {
+      // Submitter commented → notify the assignee, or all admins/agents if unassigned
+      if (ticket.assignee?.email && ticket.assignee.id !== userId) {
+        recipients.add(ticket.assignee.email)
+      } else {
+        const staff = await prisma.user.findMany({
+          where: { role: { in: ['admin', 'agent'] } },
+          select: { email: true },
+        })
+        staff.forEach(s => recipients.add(s.email))
+      }
+    }
+
     if (recipients.size > 0) {
-      sendNewCommentEmail(
+      await sendNewCommentEmail(
         Array.from(recipients),
         { id: ticket.id, title: ticket.title },
         comment.author.fullName || comment.author.email

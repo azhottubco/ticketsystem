@@ -109,7 +109,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   // Notify creator on status change
   if (updates.status && updates.status !== current.status) {
-    sendStatusChangeEmail(ticket.creator.email, { id: ticket.id, title: ticket.title, status: ticket.status })
+    await sendStatusChangeEmail(ticket.creator.email, { id: ticket.id, title: ticket.title, status: ticket.status })
   }
 
   return NextResponse.json(ticket)

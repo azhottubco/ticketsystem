@@ -94,7 +94,7 @@ export async function sendStatusChangeEmail(
     <p><a href="${APP_URL}/tickets/${ticket.id}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View Ticket</a></p>
   `)
 
-  transport.sendMail({ from: FROM, to, subject: `[Ticket Update] ${ticket.title} — ${label}`, html }).catch(console.error)
+  await transport.sendMail({ from: FROM, to, subject: `[Ticket Update] ${ticket.title} — ${label}`, html })
 }
 
 export async function sendNewCommentEmail(
@@ -112,5 +112,5 @@ export async function sendNewCommentEmail(
     <p><a href="${APP_URL}/tickets/${ticket.id}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">View Comment</a></p>
   `)
 
-  transport.sendMail({ from: FROM, to: recipients, subject: `[New Comment] ${ticket.title}`, html }).catch(console.error)
+  await transport.sendMail({ from: FROM, to: recipients, subject: `[New Comment] ${ticket.title}`, html })
 }
