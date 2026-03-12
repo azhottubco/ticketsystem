@@ -129,8 +129,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     })
   }
 
-  // Clean up attachments when ticket is closed
-  if (updates.status === 'closed' && current.status !== 'closed') {
+  // Clean up attachments when ticket is resolved or closed
+  const isBeingFinalized = (updates.status === 'resolved' || updates.status === 'closed')
+    && current.status !== updates.status
+  if (isBeingFinalized) {
     const attachments = await prisma.ticketAttachment.findMany({
       where: { ticketId: id },
       select: { id: true, url: true },
