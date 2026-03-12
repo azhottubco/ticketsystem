@@ -16,13 +16,14 @@ export default auth((request) => {
     return NextResponse.next()
   }
 
-  // Redirect unauthenticated users to login
-  if (!isLoggedIn && pathname !== '/login') {
+  // Public auth pages — allow unauthenticated access
+  const publicPaths = ['/login', '/forgot-password', '/reset-password']
+  if (!isLoggedIn && !publicPaths.includes(pathname)) {
     return NextResponse.redirect(new URL('/login', nextUrl))
   }
 
-  // Redirect authenticated users away from login / root
-  if (isLoggedIn && (pathname === '/login' || pathname === '/')) {
+  // Redirect authenticated users away from auth pages / root
+  if (isLoggedIn && (publicPaths.includes(pathname) || pathname === '/')) {
     return NextResponse.redirect(new URL('/dashboard', nextUrl))
   }
 

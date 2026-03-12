@@ -156,6 +156,17 @@ export async function sendPriorityChangeEmail(
   await transport.sendMail({ from: FROM, to, subject: `[Ticket Update] ${ticket.title} — Priority Changed`, html })
 }
 
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  const html = wrap(`
+    <h2 style="margin:0 0 16px;font-size:18px;color:#0f172a;">Reset Your Password</h2>
+    <p>We received a request to reset the password for your account.</p>
+    <p>Click the button below to set a new password. This link expires in <strong>15 minutes</strong>.</p>
+    <p style="margin:24px 0;"><a href="${resetUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Reset Password</a></p>
+    <p style="color:#64748b;font-size:13px;">If you did not request a password reset, you can safely ignore this email. Your password will not change.</p>
+  `)
+  await transport.sendMail({ from: FROM, to, subject: `${APP_NAME} — Password Reset Request`, html })
+}
+
 export async function sendAssignmentEmail(
   to: string,
   ticket: { id: string; title: string; priority: string; creatorName: string | null; creatorEmail: string }

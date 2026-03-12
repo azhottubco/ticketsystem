@@ -5,7 +5,7 @@ import { UsersPageClient } from '@/components/admin/UsersPageClient'
 export default async function UsersPage() {
   const raw = await prisma.user.findMany({
     select: { id: true, email: true, fullName: true, role: true, createdAt: true, updatedAt: true },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { fullName: 'asc' },
   })
   const users: User[] = JSON.parse(JSON.stringify(raw))
   return <UsersPageClient initialUsers={users} />
