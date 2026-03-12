@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { sendWelcomeEmail } from '@/lib/email'
+import { createSetupToken } from '@/lib/user-setup'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { z } from 'zod'
 
 const userSchema = z.object({
@@ -14,11 +16,6 @@ const userSchema = z.object({
 const bulkSchema = z.object({
   users: z.array(userSchema).min(1).max(200),
 })
-
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
 
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -41,21 +38,21 @@ export async function POST(request: NextRequest) {
       continue
     }
 
-    const tempPassword = generateTempPassword()
-    const hashed = await bcrypt.hash(tempPassword, 12)
+    const placeholder = await bcrypt.hash(crypto.randomUUID(), 12)
 
     const user = await prisma.user.create({
       data: {
         email: u.email,
         fullName: u.fullName,
         role: u.role,
-        password: hashed,
+        password: placeholder,
         mustChangePassword: true,
       },
       select: { id: true, email: true, fullName: true, role: true, createdAt: true, updatedAt: true },
     })
 
-    await sendWelcomeEmail(u.email, u.fullName, tempPassword)
+    const setupUrl = await createSetupToken(u.email)
+    await sendWelcomeEmail(u.email, u.fullName, setupUrl)
     created.push(user)
   }
 

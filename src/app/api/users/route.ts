@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { sendWelcomeEmail } from '@/lib/email'
+import { createSetupToken } from '@/lib/user-setup'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -10,11 +12,6 @@ const createSchema = z.object({
   fullName: z.string().min(1),
   role: z.enum(['admin', 'agent', 'user']),
 })
-
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
 
 export async function GET(request: NextRequest) {
   const session = await auth()
@@ -28,7 +25,6 @@ export async function GET(request: NextRequest) {
   if (role === 'admin') {
     whereRole = rolesParam ? rolesParam.split(',') : undefined
   } else if (role === 'agent') {
-    // Agents only see staff for the assignee dropdown
     whereRole = ['admin', 'agent']
   } else {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -57,21 +53,21 @@ export async function POST(request: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } })
   if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
 
-  const tempPassword = generateTempPassword()
-  const hashed = await bcrypt.hash(tempPassword, 12)
+  const placeholder = await bcrypt.hash(crypto.randomUUID(), 12)
 
   const user = await prisma.user.create({
     data: {
       email: parsed.data.email,
       fullName: parsed.data.fullName,
       role: parsed.data.role,
-      password: hashed,
+      password: placeholder,
       mustChangePassword: true,
     },
     select: { id: true, email: true, fullName: true, role: true, createdAt: true, updatedAt: true },
   })
 
-  await sendWelcomeEmail(parsed.data.email, parsed.data.fullName, tempPassword)
+  const setupUrl = await createSetupToken(parsed.data.email)
+  await sendWelcomeEmail(parsed.data.email, parsed.data.fullName, setupUrl)
 
   return NextResponse.json(user, { status: 201 })
 }

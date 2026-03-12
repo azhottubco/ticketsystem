@@ -38,20 +38,16 @@ function wrap(content: string): string {
 </html>`
 }
 
-export async function sendWelcomeEmail(to: string, name: string, tempPassword: string) {
+export async function sendWelcomeEmail(to: string, name: string, setupUrl: string) {
   const html = wrap(`
     <h2 style="margin:0 0 16px;font-size:18px;color:#0f172a;">Welcome to ${APP_NAME}</h2>
     <p>Hi ${name || to},</p>
-    <p>An account has been created for you. Here are your login details:</p>
-    <table style="margin:16px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:16px;width:100%;box-sizing:border-box;">
-      <tr><td style="padding:4px 0;color:#64748b;">Email:</td><td style="font-weight:bold;">${to}</td></tr>
-      <tr><td style="padding:4px 0;color:#64748b;">Temporary Password:</td><td style="font-weight:bold;font-family:monospace;font-size:15px;">${tempPassword}</td></tr>
-    </table>
-    <p style="color:#dc2626;font-weight:bold;">You will be required to change your password on first login.</p>
-    <p><a href="${APP_URL}/login" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Log In Now</a></p>
+    <p>An account has been created for you. Click the button below to set your password and get started.</p>
+    <p style="margin:24px 0;"><a href="${setupUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Set Up Your Account</a></p>
+    <p style="color:#64748b;font-size:13px;">This link expires in 72 hours. If you did not expect this email, you can safely ignore it.</p>
   `)
 
-  await transport.sendMail({ from: FROM, to, subject: `Welcome to ${APP_NAME} — Your Account Details`, html })
+  await transport.sendMail({ from: FROM, to, subject: `Welcome to ${APP_NAME} — Set Up Your Account`, html })
 }
 
 export async function sendNewTicketEmail(

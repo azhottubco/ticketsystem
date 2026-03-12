@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { sendWelcomeEmail } from '@/lib/email'
-import bcrypt from 'bcryptjs'
-
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
+import { createSetupToken } from '@/lib/user-setup'
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -21,15 +16,14 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const user = await prisma.user.findUnique({ where: { id } })
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  const tempPassword = generateTempPassword()
-  const hashed = await bcrypt.hash(tempPassword, 12)
-
+  // Mark mustChangePassword so they must go through the setup flow
   await prisma.user.update({
     where: { id },
-    data: { password: hashed, mustChangePassword: true },
+    data: { mustChangePassword: true },
   })
 
-  await sendWelcomeEmail(user.email, user.fullName ?? user.email, tempPassword)
+  const setupUrl = await createSetupToken(user.email)
+  await sendWelcomeEmail(user.email, user.fullName ?? user.email, setupUrl)
 
   return NextResponse.json({ ok: true })
 }
