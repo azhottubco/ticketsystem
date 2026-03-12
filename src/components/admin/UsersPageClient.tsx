@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { CreateUserForm } from './CreateUserForm'
-import { UserPlus, Pencil, Trash2 } from 'lucide-react'
+import { BulkImportUsersDialog } from './BulkImportUsersDialog'
+import { UserPlus, Users, Pencil, Trash2 } from 'lucide-react'
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-purple-100 text-purple-800 border-purple-200',
@@ -23,6 +24,7 @@ const ROLE_COLORS: Record<string, string> = {
 export function UsersPageClient({ initialUsers }: { initialUsers: User[] }) {
   const [users, setUsers] = useState(initialUsers)
   const [createOpen, setCreateOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
   const [editRole, setEditRole] = useState('')
   const [deleteUser, setDeleteUser] = useState<User | null>(null)
@@ -70,9 +72,14 @@ export function UsersPageClient({ initialUsers }: { initialUsers: User[] }) {
           <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
           <p className="text-sm text-slate-500 mt-0.5">{users.length} user{users.length !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <UserPlus className="mr-1.5 h-4 w-4" />Create User
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setBulkOpen(true)}>
+            <Users className="mr-1.5 h-4 w-4" />Bulk Import
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <UserPlus className="mr-1.5 h-4 w-4" />Create User
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -126,6 +133,13 @@ export function UsersPageClient({ initialUsers }: { initialUsers: User[] }) {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Bulk import dialog */}
+      <BulkImportUsersDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        onSuccess={newUsers => setUsers(prev => [...newUsers, ...prev])}
+      />
 
       {/* Create user dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
