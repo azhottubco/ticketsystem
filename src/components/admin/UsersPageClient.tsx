@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { CreateUserForm } from './CreateUserForm'
 import { BulkImportUsersDialog } from './BulkImportUsersDialog'
-import { UserPlus, Users, Pencil, Trash2 } from 'lucide-react'
+import { UserPlus, Users, Pencil, Trash2, KeyRound } from 'lucide-react'
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-purple-100 text-purple-800 border-purple-200',
@@ -30,6 +30,7 @@ export function UsersPageClient({ initialUsers }: { initialUsers: User[] }) {
   const [deleteUser, setDeleteUser] = useState<User | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [resettingId, setResettingId] = useState<string | null>(null)
 
   async function handleRoleUpdate() {
     if (!editUser || !editRole) return
@@ -48,6 +49,17 @@ export function UsersPageClient({ initialUsers }: { initialUsers: User[] }) {
       toast.error('Failed to update role')
     }
     setSaving(false)
+  }
+
+  async function handleResetPassword(user: User) {
+    setResettingId(user.id)
+    const res = await fetch(`/api/users/${user.id}/reset-password`, { method: 'POST' })
+    if (res.ok) {
+      toast.success(`Password reset — new login details sent to ${user.email}`)
+    } else {
+      toast.error('Failed to reset password')
+    }
+    setResettingId(null)
   }
 
   async function handleDelete() {
@@ -91,7 +103,7 @@ export function UsersPageClient({ initialUsers }: { initialUsers: User[] }) {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="w-20">Actions</TableHead>
+                <TableHead className="w-28">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -114,14 +126,26 @@ export function UsersPageClient({ initialUsers }: { initialUsers: User[] }) {
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => { setEditUser(user); setEditRole(user.role) }}
+                        title="Edit role"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-7 w-7 text-amber-500 hover:text-amber-700"
+                        onClick={() => handleResetPassword(user)}
+                        disabled={resettingId === user.id}
+                        title="Reset password & resend welcome email"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-7 w-7 text-red-400 hover:text-red-600"
                         onClick={() => setDeleteUser(user)}
+                        title="Delete user"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
