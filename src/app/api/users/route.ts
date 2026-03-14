@@ -50,14 +50,16 @@ export async function POST(request: NextRequest) {
   const parsed = createSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } })
+  const email = parsed.data.email.toLowerCase().trim()
+
+  const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
 
   const placeholder = await bcrypt.hash(crypto.randomUUID(), 12)
 
   const user = await prisma.user.create({
     data: {
-      email: parsed.data.email,
+      email,
       fullName: parsed.data.fullName,
       role: parsed.data.role,
       password: placeholder,
@@ -66,8 +68,8 @@ export async function POST(request: NextRequest) {
     select: { id: true, email: true, fullName: true, role: true, createdAt: true, updatedAt: true },
   })
 
-  const setupUrl = await createSetupToken(parsed.data.email)
-  await sendWelcomeEmail(parsed.data.email, parsed.data.fullName, setupUrl)
+  const setupUrl = await createSetupToken(email)
+  await sendWelcomeEmail(email, parsed.data.fullName, setupUrl)
 
   return NextResponse.json(user, { status: 201 })
 }

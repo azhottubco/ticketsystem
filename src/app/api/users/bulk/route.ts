@@ -32,9 +32,11 @@ export async function POST(request: NextRequest) {
   const failed: { email: string; reason: string }[] = []
 
   for (const u of parsed.data.users) {
-    const existing = await prisma.user.findUnique({ where: { email: u.email } })
+    const email = u.email.toLowerCase().trim()
+
+    const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
-      failed.push({ email: u.email, reason: 'Email already in use' })
+      failed.push({ email, reason: 'Email already in use' })
       continue
     }
 
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        email: u.email,
+        email,
         fullName: u.fullName,
         role: u.role,
         password: placeholder,
@@ -51,8 +53,8 @@ export async function POST(request: NextRequest) {
       select: { id: true, email: true, fullName: true, role: true, createdAt: true, updatedAt: true },
     })
 
-    const setupUrl = await createSetupToken(u.email)
-    await sendWelcomeEmail(u.email, u.fullName, setupUrl)
+    const setupUrl = await createSetupToken(email)
+    await sendWelcomeEmail(email, u.fullName, setupUrl)
     created.push(user)
   }
 
