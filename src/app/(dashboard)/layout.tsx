@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user: User = JSON.parse(JSON.stringify(rawUser))
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar user={user} className="hidden lg:flex w-60 shrink-0 flex-col" />
       <DashboardShell user={user}>
         {children}
